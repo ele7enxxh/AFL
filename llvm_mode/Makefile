@@ -30,6 +30,21 @@ CFLAGS      += -Wall -D_FORTIFY_SOURCE=2 -g -Wno-pointer-sign \
                -DVERSION=\"$(VERSION)\" 
 ifdef AFL_TRACE_PC
   CFLAGS    += -DUSE_TRACE_PC=1
+  ifdef AFL_TRACE_IND
+    CFLAGS  += -DUSE_TRACE_IND=1
+  endif
+  ifdef AFL_TRACE_CMP
+    CFLAGS  += -DUSE_TRACE_CMP=1
+  endif
+  ifdef AFL_TRACE_DIV
+    CFLAGS  += -DUSE_TRACE_DIV=1
+  endif
+  ifdef AFL_TRACE_GEP
+    CFLAGS  += -DUSE_TRACE_GEP=1
+  endif
+  ifdef AFL_TRACE_MEM
+    CFLAGS  += -DUSE_TRACE_MEM=1
+  endif
 endif
 
 CXXFLAGS    ?= -O3 -funroll-loops
@@ -55,9 +70,9 @@ ifeq "$(origin CC)" "default"
 endif
 
 ifndef AFL_TRACE_PC
-  PROGS      = ../afl-clang-fast ../afl-llvm-pass.so ../afl-llvm-rt.o ../afl-llvm-rt-32.o ../afl-llvm-rt-64.o
+  PROGS      = ../afl-clang-fast ../afl-llvm-pass.so ../afl-llvm-rt.o ../afl-llvm-rt-32.o ../afl-llvm-rt-64.o ../compare-transform-pass.so ../split-compares-pass.so ../split-switches-pass.so
 else
-  PROGS      = ../afl-clang-fast ../afl-llvm-rt.o ../afl-llvm-rt-32.o ../afl-llvm-rt-64.o
+  PROGS      = ../afl-clang-fast ../afl-llvm-rt.o ../afl-llvm-rt-32.o ../afl-llvm-rt-64.o ../compare-transform-pass.so ../split-compares-pass.so ../split-switches-pass.so
 endif
 
 all: test_deps $(PROGS) test_build all_done
@@ -80,6 +95,13 @@ endif
 	ln -sf afl-clang-fast ../afl-clang-fast++
 
 ../afl-llvm-pass.so: afl-llvm-pass.so.cc | test_deps
+	$(CXX) $(CLANG_CFL) -shared $< -o $@ $(CLANG_LFL)
+
+../split-switches-pass.so: split-switches-pass.so.cc | test_deps
+	$(CXX) $(CLANG_CFL) -shared $< -o $@ $(CLANG_LFL)
+../compare-transform-pass.so: compare-transform-pass.so.cc | test_deps
+	$(CXX) $(CLANG_CFL) -shared $< -o $@ $(CLANG_LFL)
+../split-compares-pass.so: split-compares-pass.so.cc | test_deps
 	$(CXX) $(CLANG_CFL) -shared $< -o $@ $(CLANG_LFL)
 
 ../afl-llvm-rt.o: afl-llvm-rt.o.c | test_deps

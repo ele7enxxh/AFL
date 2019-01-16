@@ -304,3 +304,166 @@ void __sanitizer_cov_trace_pc_guard_init(uint32_t* start, uint32_t* stop) {
   }
 
 }
+
+
+void __sanitizer_cov_trace_pc_indir(uintptr_t Callee) {
+  uintptr_t Caller = (uintptr_t)__builtin_return_address(0);
+  const uintptr_t kBits = MAP_SIZE_POW2 / 2;
+  const uintptr_t kMask = (1 << kBits) - 1;
+  uintptr_t Idx = (Caller & kMask) | ((Callee & kMask) << kBits);
+  __afl_area_ptr[Idx % MAP_SIZE]++;
+}
+
+
+void handle_cmp(uintptr_t PC, uint64_t Arg1, uint64_t Arg2) {
+  uint64_t ArgXor = Arg1 ^ Arg2;
+  uint64_t ArgDistance = __builtin_popcountll(ArgXor) + 1;
+  uint64_t Idx = ((PC & 4095) + 1) * ArgDistance;
+  __afl_area_ptr[Idx % MAP_SIZE]++;
+}
+
+
+void __sanitizer_cov_trace_cmp1(uint8_t Arg1, uint8_t Arg2) {
+  uintptr_t PC = (uintptr_t)__builtin_return_address(0);
+  handle_cmp(PC, Arg1, Arg2);
+}
+
+
+void __sanitizer_cov_trace_cmp2(uint16_t Arg1, uint16_t Arg2) {
+  uintptr_t PC = (uintptr_t)__builtin_return_address(0);
+  handle_cmp(PC, Arg1, Arg2);
+}
+
+
+void __sanitizer_cov_trace_cmp4(uint32_t Arg1, uint32_t Arg2) {
+  uintptr_t PC = (uintptr_t)__builtin_return_address(0);
+  handle_cmp(PC, Arg1, Arg2);
+}
+
+
+void __sanitizer_cov_trace_cmp8(uint64_t Arg1, uint64_t Arg2) {
+  uintptr_t PC = (uintptr_t)__builtin_return_address(0);
+  handle_cmp(PC, Arg1, Arg2);
+}
+
+
+void __sanitizer_cov_trace_const_cmp1(uint8_t Arg1, uint8_t Arg2) {
+  uintptr_t PC = (uintptr_t)__builtin_return_address(0);
+  handle_cmp(PC, Arg1, Arg2);
+}
+
+
+void __sanitizer_cov_trace_const_cmp2(uint16_t Arg1, uint16_t Arg2) {
+  uintptr_t PC = (uintptr_t)__builtin_return_address(0);
+  handle_cmp(PC, Arg1, Arg2);
+}
+
+
+void __sanitizer_cov_trace_const_cmp4(uint32_t Arg1, uint32_t Arg2) {
+  uintptr_t PC = (uintptr_t)__builtin_return_address(0);
+  handle_cmp(PC, Arg1, Arg2);
+}
+
+
+void __sanitizer_cov_trace_const_cmp8(uint64_t Arg1, uint64_t Arg2) {
+  uintptr_t PC = (uintptr_t)__builtin_return_address(0);
+  handle_cmp(PC, Arg1, Arg2);
+}
+
+
+void __sanitizer_cov_trace_switch(uint64_t Val, uint64_t *Cases) {
+  uint64_t N = Cases[0];
+  uint64_t *Vals = Cases + 2;
+  if (Vals[N - 1]  < 256 && Val < 256) return;
+  uintptr_t PC = (uintptr_t)__builtin_return_address(0);
+  size_t i;
+  uint64_t Token = 0;
+  for (i = 0; i < N; i++) {
+    Token = Val ^ Vals[i];
+    if (Val < Vals[i])
+      break;
+  }
+  handle_cmp(PC + i, Token, 0);
+}
+
+
+void __sanitizer_cov_trace_div4(uint32_t Val) {
+  uintptr_t PC = (uintptr_t)__builtin_return_address(0);
+  handle_cmp(PC, Val, 0);
+}
+
+
+void __sanitizer_cov_trace_div8(uint64_t Val) {
+  uintptr_t PC = (uintptr_t)__builtin_return_address(0);
+  handle_cmp(PC, Val, 0);
+}
+
+
+void __sanitizer_cov_trace_gep(uintptr_t Idx) {
+  uintptr_t PC =(uintptr_t)__builtin_return_address(0);
+  handle_cmp(PC, Idx, 0);
+}
+
+
+#ifdef USE_TRACE_MEM
+void handle_memcmp(void *caller_pc, const void *s1, const void *s2,
+                   size_t n, int StopAtZero) {
+  if (!n) return;
+  size_t Len = MIN(n, 256);
+  const uint8_t *B1 = (const uint8_t*)s1;
+  const uint8_t *B2 = (const uint8_t*)s2;
+  size_t I = 0;
+  while (I < Len) {
+    if (B1[I] != B2[I] || (StopAtZero && B1[I] == 0))
+      break;
+    I++;
+  }
+  size_t PC = (size_t)caller_pc;
+  size_t Idx = (PC & 4095) | (I << 12);
+  __afl_area_ptr[Idx % MAP_SIZE]++;
+}
+
+
+void __sanitizer_weak_hook_memcmp(void *caller_pc, const void *s1,
+                                  const void *s2, size_t n, int result) {
+  if (result == 0) return;
+  if (n <= 1) return;
+  handle_memcmp(caller_pc, s1, s2, n, 0);
+}
+
+
+void __sanitizer_weak_hook_strcmp(void *caller_pc, const char *s1,
+                                  const char *s2, int result) {
+  if (result == 0) return;
+  size_t N = 0;
+  while (s1[N] && s2[N]) N++;
+  if (N <= 1) return;
+  handle_memcmp(caller_pc, s1, s2, N, 1);
+}
+
+
+void __sanitizer_weak_hook_strncmp(void *caller_pc, const char *s1,
+                                   const char *s2, size_t n, int result) {
+  if (result == 0) return;
+  size_t Len1 = 0;
+  while (Len1 < n && s1[Len1]) Len1++;
+  size_t Len2 = 0;
+  while (Len2 < n && s2[Len2]) Len2++;
+  n = MIN(n, Len1);
+  n = MIN(n, Len2);
+  if (n <= 1) return;
+  handle_memcmp(caller_pc, s1, s2, n, 1);
+}
+
+
+void __sanitizer_weak_hook_strcasecmp(void *called_pc, const char *s1,
+                                      const char *s2, int result) {
+  return __sanitizer_weak_hook_strcmp(called_pc, s1, s2, result);
+}
+
+
+void __sanitizer_weak_hook_strncasecmp(void *called_pc, const char *s1,
+                                       const char *s2, size_t n, int result) {
+  return __sanitizer_weak_hook_strncmp(called_pc, s1, s2, n, result);
+}
+#endif

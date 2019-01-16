@@ -112,6 +112,27 @@ static void edit_params(u32 argc, char** argv) {
     cc_params[0] = alt_cc ? alt_cc : (u8*)"clang";
   }
 
+  if (getenv("LAF_SPLIT_SWITCHES")) {
+    cc_params[cc_par_cnt++] = "-Xclang";
+    cc_params[cc_par_cnt++] = "-load";
+    cc_params[cc_par_cnt++] = "-Xclang";
+    cc_params[cc_par_cnt++] = alloc_printf("%s/split-switches-pass.so", obj_path);
+  }
+
+  if (getenv("LAF_TRANSFORM_COMPARES")) {
+    cc_params[cc_par_cnt++] = "-Xclang";
+    cc_params[cc_par_cnt++] = "-load";
+    cc_params[cc_par_cnt++] = "-Xclang";
+    cc_params[cc_par_cnt++] = alloc_printf("%s/compare-transform-pass.so", obj_path);
+  }
+
+  if (getenv("LAF_SPLIT_COMPARES")) {
+    cc_params[cc_par_cnt++] = "-Xclang";
+    cc_params[cc_par_cnt++] = "-load";
+    cc_params[cc_par_cnt++] = "-Xclang";
+    cc_params[cc_par_cnt++] = alloc_printf("%s/split-compares-pass.so", obj_path);
+  }
+
   /* There are two ways to compile afl-clang-fast. In the traditional mode, we
      use afl-llvm-pass.so to inject instrumentation. In the experimental
      'trace-pc-guard' mode, we use native LLVM instrumentation callbacks
@@ -121,8 +142,28 @@ static void edit_params(u32 argc, char** argv) {
 
 #ifdef USE_TRACE_PC
   cc_params[cc_par_cnt++] = "-fsanitize-coverage=trace-pc-guard";
-  cc_params[cc_par_cnt++] = "-mllvm";
-  cc_params[cc_par_cnt++] = "-sanitizer-coverage-block-threshold=0";
+  u8 *trace_ind = "";
+  #ifdef USE_TRACE_IND
+    trace_ind = ",indirect-calls";
+  #endif
+
+  u8 *trace_cmp = "";
+  #ifdef USE_TRACE_CMP
+    trace_cmp = ",trace-cmp";
+  #endif
+
+  u8 *trace_div = "";
+  #ifdef USE_TRACE_DIV
+    trace_div = ",trace-div";
+  #endif
+
+  u8 *trace_gep = "";
+  #ifdef USE_TRACE_GEP
+    trace_gep = ",trace-gep";
+  #endif
+
+  cc_params[cc_par_cnt++] = alloc_printf("-fsanitize-coverage=trace-pc-guard%s%s%s%s",
+                                         trace_ind, trace_cmp, trace_div, trace_gep);
 #else
   cc_params[cc_par_cnt++] = "-Xclang";
   cc_params[cc_par_cnt++] = "-load";
