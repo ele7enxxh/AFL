@@ -45,7 +45,7 @@ namespace {
 
       bool runOnModule(Module &M) override;
 
-      const char *getPassName() const override {
+      StringRef getPassName() const override {
         return "transforms compare functions";
       }
 
@@ -169,7 +169,7 @@ bool CompareTransform::transformCmps(Module &M, const bool processStrcmp, const 
     BranchInst::Create(end_bb, next_bb);
     PHINode *PN = PHINode::Create(Int32Ty, constLen + 1, "cmp_phi");
 
-    TerminatorInst *term = bb->getTerminator();
+    Instruction *term = bb->getTerminator();
     BranchInst::Create(next_bb, bb);
     term->eraseFromParent();
 
@@ -199,7 +199,7 @@ bool CompareTransform::transformCmps(Module &M, const bool processStrcmp, const 
         next_bb =  BasicBlock::Create(C, "cmp_added", end_bb->getParent(), end_bb);
         BranchInst::Create(end_bb, next_bb);
 
-        TerminatorInst *term = cur_bb->getTerminator();
+        Instruction *term = cur_bb->getTerminator();
         Value *icmp = IRB.CreateICmpEQ(isub, ConstantInt::get(Int8Ty, 0));
         IRB.CreateCondBr(icmp, next_bb, end_bb);
         term->eraseFromParent();

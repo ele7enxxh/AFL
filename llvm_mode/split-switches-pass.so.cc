@@ -45,7 +45,7 @@ namespace {
 
       bool runOnModule(Module &M) override;
 
-      const char *getPassName() const override {
+      StringRef getPassName() const override {
         return "splits switch constructs";
       }
 
@@ -251,7 +251,7 @@ bool SplitSwitchesTransform::splitSwitches(Module &M) {
     /* Prepare cases vector. */
     CaseVector Cases;
     for (SwitchInst::CaseIt i = SI->case_begin(), e = SI->case_end(); i != e; ++i)
-      Cases.push_back(CaseExpr(i.getCaseValue(), i.getCaseSuccessor()));
+      Cases.push_back(CaseExpr(i->getCaseValue(), i->getCaseSuccessor()));
     
     std::vector<bool> bytesChecked(Cases[0].Val->getBitWidth() / 8, false);
     BasicBlock* SwitchBlock = switchConvert(Cases, bytesChecked, OrigBlock, NewDefault, Val, 0);

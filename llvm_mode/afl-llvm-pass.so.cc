@@ -47,13 +47,14 @@ namespace {
     public:
 
       static char ID;
-      AFLCoverage() : ModulePass(ID) { }
+      AFLCoverage() : ModulePass(ID) {
+      }
 
       bool runOnModule(Module &M) override;
 
-      // StringRef getPassName() const override {
-      //  return "American Fuzzy Lop Instrumentation";
-      // }
+      StringRef getPassName() const override {
+       return "American Fuzzy Lop Instrumentation";
+      }
 
   };
 

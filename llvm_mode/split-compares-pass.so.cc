@@ -30,10 +30,12 @@ namespace {
   class SplitComparesTransform : public ModulePass {
     public:
       static char ID;
-      SplitComparesTransform() : ModulePass(ID) {}
+      SplitComparesTransform() : ModulePass(ID) {
+      }
 
       bool runOnModule(Module &M) override;
-      const char *getPassName() const override {
+
+      StringRef getPassName() const override {
         return "simplifies and splits ICMP instructions";
       }
 
