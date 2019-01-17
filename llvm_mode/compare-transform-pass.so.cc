@@ -152,22 +152,14 @@ bool CompareTransform::transformCmps(Module &M, const bool processStrcmp, const 
     if (HasStr1) {
       ConstStr = Str1;
       VarStr = Str2P;
-      if (isMemcmp)
-        constLen = memcmpLen;
-      else {
-        constLen = GetStringLength(Str1P);
-        if (constLen) --constLen;
-      }
+      constLen = isMemcmp ? memcmpLen : GetStringLength(Str1P);
+      constLen = constLen > ConstStr.size() ? ConstStr.size() : constLen;
     }
     else {
       ConstStr = Str2;
       VarStr = Str1P;
-      if (isMemcmp)
-        constLen = memcmpLen;
-      else {
-        constLen = GetStringLength(Str2P);
-        if (constLen) --constLen;
-      }
+      constLen = isMemcmp ? memcmpLen : GetStringLength(Str2P);
+      constLen = constLen > ConstStr.size() ? ConstStr.size() : constLen;
     }
 
     errs() << "len " << constLen << ": " << ConstStr << "\n";
