@@ -193,7 +193,8 @@ static void edit_params(u32 argc, char** argv) {
 
     if (strstr(cur, "FORTIFY_SOURCE")) fortify_set = 1;
 
-    if (!strcmp(cur, "-shared")) maybe_linking = 0;
+    if (!getenv("AFL_ENABLE_SHARED"))
+        if (!strcmp(cur, "-shared")) maybe_linking = 0;
 
     if (!strcmp(cur, "-Wl,-z,defs") ||
         !strcmp(cur, "-Wl,--no-undefined")) continue;
